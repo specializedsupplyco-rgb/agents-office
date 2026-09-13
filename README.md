@@ -59,6 +59,24 @@ whatever you have connected in claude.ai or added with `claude mcp add`. A serve
 authentication shows grey with the reason on hover, and is not wired to any pod until it works.
 Nothing connected yet? The bar says so.
 
+### ChatGPT MCP connection
+
+Agents Office also exposes a small, token-protected MCP endpoint at `/mcp`. This is intended
+for ChatGPT or another remote MCP client after the app is deployed behind HTTPS. It provides
+runtime health, agent listing, task listing, and local task creation; it does not expose
+Claude credentials or arbitrary filesystem access.
+
+Set a long random token before starting the server:
+
+```powershell
+$env:AO_MCP_TOKEN = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+npm.cmd start
+```
+
+Register the deployed HTTPS URL ending in `/mcp` in ChatGPT's MCP/app settings and use the
+same bearer token there. Do not expose the endpoint without `AO_MCP_TOKEN`, and do not use
+`http://localhost:4520/mcp` from ChatGPT because ChatGPT cannot reach a private localhost.
+
 Agents can call those servers while they work, plus web search. They never get Bash, file
 tools or sub-agents. Their standing rule: read freely; send, post, pay, delete or change
 anything outside this machine **only** when your task explicitly asks for that exact action.

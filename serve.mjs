@@ -40,6 +40,7 @@ import * as learn from './learn.mjs';
 import * as onboard from './onboard.mjs';
 import * as routines from './routines.mjs';
 import * as usage from './usage.mjs';
+import { MCP_PATH, handleMcp } from './chatgpt-mcp.mjs';
 import { normModel, modelFor, modelArgs, modelId, modelName, MODEL_KEYS, DEFAULT_MODEL, normEffort, effortFor, effortName, EFFORT_KEYS } from './src/models.js';
 import { parseWhen, describe, valid as validWhen, untilText } from './src/when.js';
 
@@ -354,6 +355,22 @@ const agentsOut = () => { const setup = setupMap(); return AGENTS.map(a => ({ id
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
+    if (url.pathname === MCP_PATH) {
+      const token = process.env.AO_MCP_TOKEN || '';
+      return handleMcp(req, res, {
+        token,
+        health: async () => ({ ok: true, version, backend, model: cfg.model, name: cfg.name, mcp: mcp.summary() }),
+        agents: async () => agentsOut(),
+        tasks: async limit => load().slice(-(Math.min(50, Math.max(1, Number(limit) || 20)))),
+        createTask: async (dept, text) => {
+          if (!DEPTS[dept] || dept === 'brain') throw new Error('unknown department');
+          if (!text || !String(text).trim()) throw new Error('empty task');
+          const r = await route(dept, String(text).trim());
+          const task = { id: nid(), dept, agent: r.agent, title: r.title, text: String(text).trim(), plan: r.plan, eta: r.eta, why: r.why, state: 'next', addedAt: Date.now(), by: 'chatgpt-mcp' };
+          const list = load(); list.push(task); save(list); return task;
+        },
+      });
+    }
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/command-centre-v2.html' || url.pathname === '/dark')) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       const page = fs.readFileSync(HTML, 'utf8');
