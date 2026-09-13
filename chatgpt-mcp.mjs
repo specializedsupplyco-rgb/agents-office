@@ -62,6 +62,19 @@ export async function handleMcp(req, res, {
     res.writeHead(204, { ...headers, 'access-control-allow-headers': 'authorization, content-type, mcp-session-id', allow: 'OPTIONS, POST' });
     return res.end();
   }
+  if (req.method === 'GET') {
+    if (!mcpAuthorized(req, token)) {
+      res.writeHead(401, { ...headers, 'content-type': 'application/json', 'www-authenticate': 'Bearer' });
+      return res.end(JSON.stringify({ error: 'Unauthorized' }));
+    }
+    res.writeHead(200, { ...headers, 'content-type': 'application/json' });
+    return res.end(JSON.stringify({
+      ok: true,
+      name: 'agents-office',
+      message: 'MCP endpoint is reachable. MCP initialize and tools/call requests must use POST.',
+      endpoint: MCP_PATH,
+    }));
+  }
   if (!mcpAuthorized(req, token)) {
     res.writeHead(401, { ...headers, 'content-type': 'application/json', 'www-authenticate': 'Bearer' });
     return res.end(JSON.stringify({ error: 'Unauthorized' }));
