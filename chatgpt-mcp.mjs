@@ -45,7 +45,9 @@ const error = message => ({ isError: true, content: [{ type: 'text', text: messa
 export function mcpAuthorized(req, token) {
   if (!token) return false;
   const value = req.headers.authorization || '';
-  return value === `Bearer ${token}`;
+  if (value === `Bearer ${token}`) return true;
+  const url = new URL(req.url || '/', 'http://localhost');
+  return url.searchParams.get('access_token') === token;
 }
 
 export async function handleMcp(req, res, {
@@ -56,6 +58,10 @@ export async function handleMcp(req, res, {
   createTask,
 }) {
   const headers = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'mcp-session-id' };
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, { ...headers, 'access-control-allow-headers': 'authorization, content-type, mcp-session-id', allow: 'OPTIONS, POST' });
+    return res.end();
+  }
   if (!mcpAuthorized(req, token)) {
     res.writeHead(401, { ...headers, 'content-type': 'application/json', 'www-authenticate': 'Bearer' });
     return res.end(JSON.stringify({ error: 'Unauthorized' }));
